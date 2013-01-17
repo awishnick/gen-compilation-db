@@ -4,10 +4,32 @@ import os.path as path
 import sys
 from textwrap import dedent
 from string import Template
+from subprocess import Popen, PIPE
+
+
+def fall_back_on_xcode(args):
+    """Take the arguments we intercepted, and pass them to the real compiler.
+    """
+    args = list(args)
+    args[0] = 'clang'
+    args.insert(0, 'xcrun')
+    p = Popen(args, stdout=PIPE, stderr=PIPE)
+    p.communicate()
+    return p.returncode
 
 
 def parse_args(args):
     command_list_path = os.environ['INTERCEPT_COMMAND_LIST']
+
+    # If this is a precompiled header, let xcode do its thing. This makes it so
+    # precompiled headers are still generated, which is useful for code
+    # completion.
+    try:
+        filetype_idx = args.index('-x') + 1
+        if args[filetype_idx].endswith('-header'):
+            return fall_back_on_xcode(args)
+    except:
+        pass
 
     # Xcode seems to pass the filename after the '-c' argument. It's probably
     # not very safe to rely on this, but the right way would be to have
