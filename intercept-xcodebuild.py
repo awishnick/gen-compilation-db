@@ -12,6 +12,7 @@ from subprocess import Popen, PIPE
 import sys
 import json
 from shutil import copyfile
+from tempfile import mkstemp
 
 
 def intercept_xcodebuild(xcodebuild_args, intercept_path, command_list_path):
@@ -74,21 +75,29 @@ def update_merged_command_list(command_list_path, merged_path):
         merged_file.write(json.dumps(merged, **JSON_OPTIONS))
 
 
+class TemporaryFileWithCleanup:
+    def __enter__(self):
+        (self.handle, self.filename) = mkstemp()
+        return self.filename
+
+    def __exit__(self, type, value, traceback):
+        os.remove(self.filename)
+
+
 def main(args):
     script_path = path.dirname(os.path.realpath(__file__))
     intercept_path = path.join(script_path, 'intercept.py')
-    command_list_path = path.join(os.getcwd(), 'compile_commands.json')
+    with TemporaryFileWithCleanup() as command_list_path:
+        merged_path = args[1]
 
-    merged_path = args[1]
+        intercept_xcodebuild(args[2:],
+                             intercept_path,
+                             command_list_path)
 
-    intercept_xcodebuild(args[2:],
-                         intercept_path,
-                         command_list_path)
-
-    if path.exists(merged_path):
-        update_merged_command_list(command_list_path, merged_path)
-    else:
-        copyfile(command_list_path, merged_path)
+        if path.exists(merged_path):
+            update_merged_command_list(command_list_path, merged_path)
+        else:
+            copyfile(command_list_path, merged_path)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
