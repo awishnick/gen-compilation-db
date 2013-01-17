@@ -4,7 +4,7 @@ import os.path as path
 import sys
 from textwrap import dedent
 from string import Template
-from subprocess import Popen, PIPE
+from subprocess import Popen
 
 
 def fall_back_on_xcode(args):
@@ -13,7 +13,7 @@ def fall_back_on_xcode(args):
     args = list(args)
     args[0] = 'clang'
     args.insert(0, 'xcrun')
-    p = Popen(args, stdout=PIPE, stderr=PIPE)
+    p = Popen(args)
     p.communicate()
     return p.returncode
 
@@ -37,6 +37,10 @@ def parse_args(args):
     file_idx = args.index('-c') + 1
     if file_idx >= len(args):
         return 0
+    filename = path.abspath(args[file_idx])
+
+    if filename == '/dev/null':
+        return fall_back_on_xcode(args)
 
     tpl_str = dedent('''\
         { "directory": "$directory",
@@ -54,7 +58,7 @@ def parse_args(args):
     with open(command_list_path, 'a') as f:
         f.write(tpl.substitute(directory=os.getcwd(),
                                command=' '.join(args),
-                               filename=path.abspath(args[file_idx])))
+                               filename=filename))
 
     return 0
 
