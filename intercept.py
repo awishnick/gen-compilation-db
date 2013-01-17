@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import os.path as path
 import sys
 from textwrap import dedent
 from string import Template
@@ -31,7 +32,7 @@ def parse_args(args):
     with open(command_list_path, 'a') as f:
         f.write(tpl.substitute(directory=os.getcwd(),
                                command=' '.join(args),
-                               filename=args[file_idx]))
+                               filename=path.abspath(args[file_idx])))
 
     return 0
 
