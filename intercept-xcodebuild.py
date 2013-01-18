@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 """Build a compilation database in JSON format, suitable for clang.
 
-This is done by intercepting the compiler, and running xcodebuild. The first
-argument passed in is the (possibly existing) compilation database to merge the
-new results with. All remaining arguments are passed to xcodebuild.
+Usage:
+intercept-xcodebuild.py <output-db> <compiler-path> [xcodebuild args]
+
+The compilation database may already exist, and if it does, the new results
+will be merged with it. The passed-in compiler will be used to generate any
+precompiled headers, and will end up as the compiler in the compilation
+database. All remaining arguments are passed to xcodebuild.
 """
 
 import os
@@ -15,7 +19,8 @@ from shutil import copyfile
 from tempfile import mkstemp
 
 
-def intercept_xcodebuild(xcodebuild_args, intercept_path, command_list_path):
+def intercept_xcodebuild(xcodebuild_args, intercept_path, compiler_path,
+                         command_list_path):
     """Run xcodebuild, substituting intercept.py for the compiler.
 
     intercept.py will write the commands out to command_list_path.
@@ -25,6 +30,7 @@ def intercept_xcodebuild(xcodebuild_args, intercept_path, command_list_path):
 
     new_env = dict(os.environ,
                    INTERCEPT_COMMAND_LIST=command_list_path,
+                   INTERCEPT_CC=compiler_path,
                    CC=intercept_path,
                    CXX=intercept_path)
 
@@ -84,14 +90,28 @@ class TemporaryFileWithCleanup:
         os.remove(self.filename)
 
 
+def usage():
+    """Print the usage string and return an appropriate error code."""
+    print __doc__
+    return 0
+
+
 def main(args):
     script_path = path.dirname(os.path.realpath(__file__))
     intercept_path = path.join(script_path, 'intercept.py')
+
+    if len(args) < 3:
+        return usage()
+    if args[1] == '-h':
+        return usage()
+
     with TemporaryFileWithCleanup() as command_list_path:
         merged_path = args[1]
+        compiler_path = args[2]
 
-        intercept_xcodebuild(args[2:],
+        intercept_xcodebuild(args[3:],
                              intercept_path,
+                             compiler_path,
                              command_list_path)
 
         if path.exists(merged_path):

@@ -7,19 +7,21 @@ from string import Template
 from subprocess import Popen
 
 
-def fall_back_on_xcode(args):
+def fall_back_on_xcode(compiler_path, args):
     """Take the arguments we intercepted, and pass them to the real compiler.
     """
     args = list(args)
-    args[0] = 'clang'
-    args.insert(0, 'xcrun')
+    args[0] = compiler_path
     p = Popen(args)
-    p.communicate()
+    (stdoutdata, stderrdata) = p.communicate()
+    sys.stdout.write(stdoutdata)
+    sys.stderr.write(stderrdata)
     return p.returncode
 
 
 def parse_args(args):
     command_list_path = os.environ['INTERCEPT_COMMAND_LIST']
+    compiler_path = os.environ.get('INTERCEPT_CC', 'clang')
 
     # If this is a precompiled header, let xcode do its thing. This makes it so
     # precompiled headers are still generated, which is useful for code
@@ -27,7 +29,7 @@ def parse_args(args):
     try:
         filetype_idx = args.index('-x') + 1
         if args[filetype_idx].endswith('-header'):
-            return fall_back_on_xcode(args)
+            return fall_back_on_xcode(compiler_path, args)
     except:
         pass
 
@@ -53,7 +55,7 @@ def parse_args(args):
     tpl_str = '\n'.join(tpl_lines)
     tpl = Template(tpl_str)
 
-    args[0] = 'clang'
+    args[0] = compiler_path
 
     with open(command_list_path, 'a') as f:
         f.write(tpl.substitute(directory=os.getcwd(),

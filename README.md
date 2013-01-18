@@ -10,4 +10,4 @@ This is a tool for generating and updating such a database from Xcode projects.
 
 Usage
 -----
-    intercept-xcodebuild.py <output-db> [additional args for xcodebuild[
+    intercept-xcodebuild.py <output-db> <compiler-path> [xcodebuild args]
