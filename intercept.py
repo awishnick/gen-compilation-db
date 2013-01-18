@@ -4,7 +4,7 @@ import os.path as path
 import sys
 from textwrap import dedent
 from string import Template
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 
 def fall_back_on_xcode(compiler_path, args):
@@ -12,7 +12,7 @@ def fall_back_on_xcode(compiler_path, args):
     """
     args = list(args)
     args[0] = compiler_path
-    p = Popen(args)
+    p = Popen(args, stdout=PIPE, stderr=PIPE)
     (stdoutdata, stderrdata) = p.communicate()
     sys.stdout.write(stdoutdata)
     sys.stderr.write(stderrdata)
